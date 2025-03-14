@@ -1,0 +1,74 @@
+name: Tests Smart Contract
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './backend/package-lock.json'
+
+      - name: Cache Node Modules
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: './backend/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('./backend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      - name: Run tests
+        run: npx hardhat test
+
+      - name: Run coverage
+        run: npx hardhat coverage
+        
+      - name: List coverage directory
+        run: ls -la coverage/
+        
+      - name: Display test coverage
+        run: |
+          if [ -f "coverage/lcov.info" ]; then
+            echo "Coverage file found"
+            COVERAGE=$(cat coverage/lcov.info | grep -o 'LF:[0-9]*' | grep -o '[0-9]*')
+            echo "Lines Found: $COVERAGE"
+            COVERED=$(cat coverage/lcov.info | grep -o 'LH:[0-9]*' | grep -o '[0-9]*')
+            echo "Lines Hit: $COVERED"
+            
+            if [ "$COVERAGE" -gt 0 ]; then
+              PERCENTAGE=$((COVERED * 100 / COVERAGE))
+              echo "Coverage: $PERCENTAGE%"
+              
+              if [ "$PERCENTAGE" -ge 90 ]; then
+                echo "✅ Good coverage (>= 90%)"
+              elif [ "$PERCENTAGE" -ge 80 ]; then
+                echo "⚠️ Acceptable coverage (>= 80%)"
+              else
+                echo "⚠️ Low coverage (< 80%)"
+              fi
+            else
+              echo "No lines to cover found"
+            fi
+          else
+            echo "Coverage file not found"
+          fi
