@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
-import { useReadContract, useWriteContract, useAccount } from 'wagmi';
+import { useReadContract, useWriteContract, useAccount, useWaitForTransactionReceipt } from 'wagmi';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import AlertMessage from '../shared/AlertMessage';
@@ -35,9 +35,22 @@ const Proposals = ({ isOwner }) => {
   });
 
   // eléments BC nécessaires à l'enregistement des propositions
-  const { data: hash, error, isPending, writeContract } = useWriteContract()
+  const { data: hash, error, isSuccess, isPending, writeContract } = useWriteContract()
 
-  // Modifier la fonction handleProposal
+  // Ajouter le hook pour attendre la transaction
+  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
+    hash,
+    onSuccess: async () => {
+      setTransactionStatus({
+        type: 'success',
+        message: "Proposition ajoutée avec succès!"
+      });
+      await getProposals();
+      setProposalInput('');
+    },
+  });
+
+  // Gérer la soumission de la proposition
   const handleProposal = async () => { 
     try {
       setTransactionStatus({
@@ -45,27 +58,12 @@ const Proposals = ({ isOwner }) => {
         message: "Transaction en cours de traitement..."
       });
       
-      const result = await writeContract({
+      await writeContract({
         address: VOTING_CONTRACT_ADDRESS,
         abi: VOTING_CONTRACT_ABI,
         functionName: 'addProposal',
         args: [proposalInput]
       });
-
-      // Attendre la confirmation de la transaction
-      await publicClient.waitForTransactionReceipt({ 
-        hash: result 
-      });
-
-      // Transaction confirmée
-      setTransactionStatus({
-        type: 'success',
-        message: "Proposition ajoutée avec succès!"
-      });
-      
-      // Rafraîchir la liste et réinitialiser le formulaire
-      await getProposals();
-      setProposalInput('');
 
     } catch(error) {
       console.error("Erreur lors de la soumission de la proposition:", error);
@@ -76,7 +74,7 @@ const Proposals = ({ isOwner }) => {
     }
   };
 
-  // Modification de la fonction getProposals
+  // Récupérer les propositions
   const getProposals = async() => {
     try {
       setIsLoading(true);
@@ -115,7 +113,7 @@ const Proposals = ({ isOwner }) => {
     }
   };
 
-  // Modification du useEffect
+  // Effet pour récupérer les propositions
   useEffect(() => {
     if (address) {
       getProposals();
@@ -129,7 +127,7 @@ const Proposals = ({ isOwner }) => {
     }
   }, [voterData]);
 
-  // Supprimer l'effet pour gérer les erreurs avec toast
+  // Gestion des échecs ou succès lors de la soumission de la proposition 
   useEffect(() => {
     if (error) {
       setTransactionStatus({
@@ -137,7 +135,13 @@ const Proposals = ({ isOwner }) => {
         message: "Erreur lors de la soumission de la proposition"
       });
     }
-  }, [error]);
+    else  if (isSuccess) {
+      setTransactionStatus({
+        type: 'success',
+        message: "Proposition ajoutée avec succès!"
+      });
+    }
+  }, [error, isSuccess]);
 
   // Fonction pour soumettre une proposition
   const submitProposal = (e) => {
@@ -173,7 +177,11 @@ const Proposals = ({ isOwner }) => {
                 <div className="mb-4">
                   <AlertMessage 
                     type={transactionStatus.type}
-                    title={transactionStatus.type === 'success' ? "Succès" : "Erreur"}
+                    title={
+                      transactionStatus.type === 'success' ? "Succès" : 
+                      transactionStatus.type === 'error' ? "Erreur" :
+                      "Information"  // Cas par défaut pour 'info'
+                    }
                     message={transactionStatus.message}
                   />
                 </div>
