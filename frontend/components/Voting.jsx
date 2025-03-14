@@ -19,7 +19,7 @@ const Voting = () => {
   });
 
   // Lire le statut actuel du workflow
-  const { data: workflowStatus, isLoading: isLoadingStatus } = useReadContract({
+  const { data: workflowStatus, isLoading: isLoadingStatus , refetch} = useReadContract({
     address: VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
@@ -34,6 +34,7 @@ const Voting = () => {
     }
   }, [ownerAddress, address]);
 
+   
   return (
     <div className="flex flex-col">
       <h2 className="text-2xl font-bold mb-6">Plateforme de Vote</h2>
@@ -103,7 +104,7 @@ const Voting = () => {
         </TabsContent>
         
         <TabsContent value="proposals" className="p-4 mt-4 border rounded-lg shadow-sm">
-          <Proposals isOwner={isOwner} />
+          <Proposals isOwner={isOwner}/>
         </TabsContent>
         
         <TabsContent value="votes" className="p-4 mt-4 border rounded-lg shadow-sm">
@@ -118,4 +119,4 @@ const Voting = () => {
   );
 };
 
-export default Voting; 
+export default Voting;

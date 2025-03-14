@@ -1,10 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
-import { useReadContract, useAccount } from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import AlertMessage from '../shared/AlertMessage';
+import { Badge } from '@/components/ui/badge';
+import { publicClient } from '@/utils/client';
+import { parseAbiItem } from 'viem';
+import { toast } from 'sonner';
 
 const Proposals = ({ isOwner }) => {
   const { address } = useAccount();
@@ -30,6 +34,83 @@ const Proposals = ({ isOwner }) => {
     account: address
   });
 
+  // eléments BC nécessaires à l'enregistement des propositions
+  const { data: hash, error, isPending, writeContract } = useWriteContract()
+
+  // Fonction pour soumettre une proposition
+  const handleProposal = async () => { 
+    try {
+      await writeContract({
+        address: VOTING_CONTRACT_ADDRESS,
+        abi: VOTING_CONTRACT_ABI,
+        functionName: 'addProposal',
+        args: [proposalInput]
+      });
+    } catch(error) {
+      console.error("Erreur lors de la soumission de la proposition:", error);
+      toast.error("Erreur lors de la soumission de la proposition");
+    }
+  };
+
+  // Modification de la fonction getProposals
+  const getProposals = async() => {
+    try {
+      setIsLoading(true);
+      const proposalEvents = await publicClient.getLogs({
+        address: VOTING_CONTRACT_ADDRESS,
+        event: parseAbiItem('event ProposalRegistered(uint proposalId)'),
+        fromBlock: 0n,
+        toBlock: 'latest'
+      });
+
+      const detailedProposals = await Promise.all(
+        proposalEvents.map(async (event) => {
+          const block = await publicClient.getBlock({ blockHash: event.blockHash });
+          const transaction = await publicClient.getTransaction({ hash: event.transactionHash });
+          
+          const proposal = await publicClient.readContract({
+            address: VOTING_CONTRACT_ADDRESS,
+            abi: VOTING_CONTRACT_ABI,
+            functionName: 'getOneProposal',
+            args: [event.args.proposalId]
+          });
+
+          return {
+            proposalId: event.args.proposalId,
+            description: proposal.description,
+            blockTimestamp: Number(block.timestamp),
+            sender: transaction.from
+          };
+        })
+      );
+      setProposals(detailedProposals);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des propositions:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Modification du useEffect
+  useEffect(() => {
+    if (address) {
+      getProposals();
+    }
+  }, [address]);
+
+  const  { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+      onSuccess: () => {
+        // Refresh proposals list
+        getProposals();
+        // Reset form
+        setProposalInput('');
+        // Show success message
+        toast.success("Proposition ajoutée avec succès!");
+      },
+    });
+  
   // Effet pour vérifier si l'utilisateur est un votant
   useEffect(() => {
     if (voterData) {
@@ -37,28 +118,17 @@ const Proposals = ({ isOwner }) => {
     }
   }, [voterData]);
 
-  // Simuler le chargement des propositions
+  // Effet pour gérer les erreurs
   useEffect(() => {
-    // Simulation de données pour les propositions
-    const mockProposals = [
-      { id: 0, description: "Proposition 1: Exemple de proposition", voteCount: 0 },
-      { id: 1, description: "Proposition 2: Une autre proposition", voteCount: 2 },
-      { id: 2, description: "Proposition 3: Dernière proposition d'exemple", voteCount: 1 }
-    ];
-    
-    const timer = setTimeout(() => {
-      setProposals(mockProposals);
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    if (error) {
+      toast.error("Erreur lors de la soumission de la proposition");
+    }
+  }, [error]);
 
-  // Fonction pour soumettre une proposition (à implémenter par l'équipe)
+  // Fonction pour soumettre une proposition
   const submitProposal = (e) => {
     e.preventDefault();
-    alert("Fonctionnalité à implémenter par l'équipe: Soumettre la proposition: " + proposalInput);
-    setProposalInput('');
+    handleProposal();
   };
 
   // Déterminer le statut d'affichage en fonction du workflow
@@ -98,9 +168,9 @@ const Proposals = ({ isOwner }) => {
                 <Button 
                   type="submit" 
                   className="bg-blue-600 hover:bg-blue-700"
-                  disabled={!proposalInput.trim()}
+                  disabled={!proposalInput.trim() || isConfirming}
                 >
-                  Soumettre
+                  {isConfirming ? 'Transaction en cours...' : 'Soumettre'}
                 </Button>
               </form>
             </div>
@@ -126,19 +196,38 @@ const Proposals = ({ isOwner }) => {
             <h3 className="text-lg font-semibold mb-4">Liste des propositions</h3>
             
             {isLoading ? (
-              <p className="text-gray-500">Chargement des propositions...</p>
-            ) : proposals.length === 0 ? (
-              <p className="text-gray-500">Aucune proposition n'a été soumise.</p>
-            ) : (
+              <div className="p-4 text-center">
+                <p className="text-gray-500">Chargement des propositions...</p>
+              </div>
+            ) : proposals && proposals.length > 0 ? (
               <div className="space-y-4">
-                {proposals.map((proposal) => (
-                  <div key={proposal.id} className="p-4 bg-white border rounded-lg shadow-sm">
-                    <p className="font-medium">{proposal.description}</p>
-                    {displayStatus >= 5 && (
-                      <p className="mt-2 text-sm text-gray-600">Votes reçus: {proposal.voteCount}</p>
-                    )}
+                {proposals.map((proposal, index) => (
+                  <div 
+                    key={proposal.proposalId.toString()} 
+                    className="p-4 mb-3 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-gray-800"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <Badge 
+                        variant="outline" 
+                        className="bg-purple-100 text-purple-700 border-purple-200"
+                      >
+                        Proposition #{proposal.proposalId.toString()}
+                      </Badge><span className="items-center text-lg font-semibold mb-4">{proposal.description}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-3">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Proposé par : {proposal.sender}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        le : {new Date(proposal.blockTimestamp * 1000).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center">
+                <p className="text-gray-500">Aucune proposition n'a été soumise.</p>
               </div>
             )}
           </div>
@@ -148,4 +237,4 @@ const Proposals = ({ isOwner }) => {
   );
 };
 
-export default Proposals; 
+export default Proposals;
