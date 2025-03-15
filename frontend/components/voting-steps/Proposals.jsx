@@ -6,8 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import AlertMessage from '../shared/AlertMessage';
 import { Badge } from '@/components/ui/badge';
-import { publicClient } from '@/utils/client';
-import { parseAbiItem } from 'viem';
+import { getProposals } from '@/utils/votingUtils';
 
 const Proposals = ({ isOwner }) => {
   const { address } = useAccount();
@@ -15,7 +14,7 @@ const Proposals = ({ isOwner }) => {
   const [proposals, setProposals] = useState([]);
   const [proposalInput, setProposalInput] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [transactionStatus, setTransactionStatus] = useState(null); // Ajoutez cet état
+  const [transactionStatus, setTransactionStatus] = useState(null);
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus } = useReadContract({
@@ -45,8 +44,8 @@ const Proposals = ({ isOwner }) => {
         type: 'success',
         message: "Proposition ajoutée avec succès!"
       });
-      await getProposals();
-      setProposalInput('');
+      await fetchProposals();   // ce code n'est pas exécuté (?)
+      setProposalInput('');   // idem (?)
     },
   });
 
@@ -75,39 +74,17 @@ const Proposals = ({ isOwner }) => {
   };
 
   // Récupérer les propositions
-  const getProposals = async() => {
+  const fetchProposals = async() => {
     try {
       setIsLoading(true);
-      const proposalEvents = await publicClient.getLogs({
-        address: VOTING_CONTRACT_ADDRESS,
-        event: parseAbiItem('event ProposalRegistered(uint proposalId)'),
-        fromBlock: process.env.NEXT_PUBLIC_FROM_BLOCK ? BigInt(process.env.NEXT_PUBLIC_FROM_BLOCK) : 0n,
-        toBlock: 'latest'
-      });
-
-      const detailedProposals = await Promise.all(
-        proposalEvents.map(async (event) => {
-          const block = await publicClient.getBlock({ blockHash: event.blockHash });
-          const transaction = await publicClient.getTransaction({ hash: event.transactionHash });
-          
-          const proposal = await publicClient.readContract({
-            address: VOTING_CONTRACT_ADDRESS,
-            abi: VOTING_CONTRACT_ABI,
-            functionName: 'getOneProposal',
-            args: [event.args.proposalId]
-          });
-
-          return {
-            proposalId: event.args.proposalId,
-            description: proposal.description,
-            blockTimestamp: Number(block.timestamp),
-            sender: transaction.from
-          };
-        })
-      );
-      setProposals(detailedProposals);
+      const proposals = await getProposals();
+      setProposals(proposals);
     } catch (error) {
       console.error("Erreur lors de la récupération des propositions:", error);
+      setTransactionStatus({
+        type: 'error',
+        message: "Erreur lors de la récupération des propositions soumises"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +93,7 @@ const Proposals = ({ isOwner }) => {
   // Effet pour récupérer les propositions
   useEffect(() => {
     if (address) {
-      getProposals();
+      fetchProposals();
     }
   }, [address]);
 
@@ -135,11 +112,13 @@ const Proposals = ({ isOwner }) => {
         message: "Erreur lors de la soumission de la proposition"
       });
     }
-    else  if (isSuccess) {
+    if (isSuccess) {
       setTransactionStatus({
         type: 'success',
         message: "Proposition ajoutée avec succès!"
       });
+      fetchProposals();
+      setProposalInput('');
     }
   }, [error, isSuccess]);
 

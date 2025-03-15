@@ -1,9 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
-import { useReadContract, useAccount } from 'wagmi';
+import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { publicClient } from '@/utils/client'
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import AlertMessage from '../shared/AlertMessage';
+import { getProposals } from '@/utils/votingUtils'
 
 const Votes = ({ isOwner }) => {
   const { address } = useAccount();
@@ -12,6 +15,15 @@ const Votes = ({ isOwner }) => {
   const [hasVoted, setHasVoted] = useState(false);
   const [votedProposalId, setVotedProposalId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [transactionStatus, setTransactionStatus] = useState(null);
+
+  // Ajouter les hooks pour la transaction
+  const { data: hash, error, isPending: isWritePending, writeContract } = useWriteContract();
+  
+  // Attendre la confirmation de la transaction
+  const { isLoading: isConfirming, isSuccess, error: errorConfirmation } = useWaitForTransactionReceipt({
+    hash
+  });
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus } = useReadContract({
@@ -41,27 +53,88 @@ const Votes = ({ isOwner }) => {
     }
   }, [voterData]);
 
-  // Simuler le chargement des propositions
-  useEffect(() => {
-    // Simulation de données pour les propositions
-    const mockProposals = [
-      { id: 0, description: "Proposition 1: Exemple de proposition", voteCount: 0 },
-      { id: 1, description: "Proposition 2: Une autre proposition", voteCount: 2 },
-      { id: 2, description: "Proposition 3: Dernière proposition d'exemple", voteCount: 1 }
-    ];
-    
-    const timer = setTimeout(() => {
-      setProposals(mockProposals);
-      setIsLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+// Récupérer les propositions
+  const fetchProposals = async() => {
+    try {
+      setIsLoading(true)
+      const proposals = await getProposals()
+      setProposals(proposals)
+    } catch (error) {
+      console.error("Erreur lors de la récupération des propositions:", error)
+      setTransactionStatus({
+        type: 'error',
+        message: "Erreur lors de la récupération des propositions"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-  // Fonction pour voter (à implémenter par l'équipe)
-  const submitVote = (proposalId) => {
-    alert(`Fonctionnalité à implémenter par l'équipe: Voter pour la proposition #${proposalId}`);
+  // Effet pour récupérer les propositions
+  useEffect(() => {
+    if (address) {
+      fetchProposals()
+    }
+  }, [address])
+
+  // Effet pour gérer le succès de la transaction
+  useEffect(() => {
+    if (isSuccess) {
+      setTransactionStatus({
+        type: 'success',
+        message: "Vote enregistré avec succès!"
+      });
+      // Rafraîchir les données
+      fetchProposals();
+    }
+    if (errorConfirmation) {
+      setTransactionStatus({
+        type: 'error',
+        message: errorConfirmation.message || "Erreur lors du vote"
+      });
+    }
+  }, [isSuccess, errorConfirmation]);
+
+  // Modifier la fonction submitVote
+  const submitVote = async (proposalId) => {
+    try {
+      setTransactionStatus({
+        type: 'info',
+        message: "Transaction en cours de traitement..."
+      });
+      
+      await writeContract({
+        address: VOTING_CONTRACT_ADDRESS,
+        abi: VOTING_CONTRACT_ABI,
+        functionName: 'setVote',
+        args: [Number(proposalId)]
+      });
+
+    } catch(error) {
+      console.error("Erreur lors du vote:", error);
+      setTransactionStatus({
+        type: 'error',
+        message: "Erreur lors de la soumission du vote"
+      });
+    }
   };
+
+  // Ajouter un effet pour gérer le succès/échec de la transaction
+  useEffect(() => {
+    if (error) {
+      setTransactionStatus({
+        type: 'error',
+        message: "Erreur lors de la soumission du vote"
+      });
+    }
+    if (isSuccess) {
+      // La transaction est confirmée dans useWaitForTransactionReceipt
+      setTransactionStatus({
+        type: 'success',
+        message: "Vote enregistré avec succès!"
+      });
+    }
+  }, [error, isSuccess]);
 
   // Déterminer le statut d'affichage en fonction du workflow
   const getDisplayStatus = () => {
@@ -125,23 +198,27 @@ const Votes = ({ isOwner }) => {
             ) : (
               <div className="space-y-4">
                 {proposals.map((proposal) => (
-                  <div key={proposal.id} className="p-4 bg-white border rounded-lg shadow-sm flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{proposal.description}</p>
-                      {displayStatus >= 5 && (
-                        <p className="mt-2 text-sm text-gray-600">Votes reçus: {proposal.voteCount}</p>
-                      )}
+                  <div 
+                    key={proposal.proposalId.toString()} 
+                    className="p-4 mb-3 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-gray-800"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <Badge 
+                        variant="outline" 
+                        className="bg-purple-100 text-purple-700 border-purple-200"
+                      >
+                        Proposition #{proposal.proposalId.toString()}
+                      </Badge>
+                      <span className="text-lg font-semibold">{proposal.description}</span>
                     </div>
-                    
                     {displayStatus === 3 && isVoter && !hasVoted && (
                       <Button 
-                        onClick={() => submitVote(proposal.id)}
-                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={() => submitVote(proposal.proposalId)}
+                        className="bg-blue-600 hover:bg-blue-700 items-center"
                       >
                         Voter
                       </Button>
                     )}
-                    
                     {hasVoted && votedProposalId === proposal.id && (
                       <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
                         Votre vote
@@ -158,4 +235,4 @@ const Votes = ({ isOwner }) => {
   );
 };
 
-export default Votes; 
+export default Votes;
