@@ -1,4 +1,4 @@
-const RPC = process.env.SEPOLIA_RPC_URL || "";
+const RPC = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || "";
 export const sepolia = {
     id: 11155111,
     name: 'Sepolia',

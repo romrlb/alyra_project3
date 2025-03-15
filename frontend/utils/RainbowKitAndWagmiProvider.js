@@ -14,7 +14,7 @@ import {
 
 const config = getDefaultConfig({
   appName: 'My RainbowKit App',
-  projectId: process.env.RAINBOW_PROJECT_ID,
+  projectId: process.env.NEXT_PUBLIC_RAINBOW_PROJECT_ID,
   chains: [hardhat, sepolia],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
