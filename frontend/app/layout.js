@@ -1,6 +1,6 @@
 import localFont from "next/font/local";
 import "./globals.css";
-import RainbowKitAndWagmiProvider from "../utils/RainbowKitAndWagmiProvider";
+import RainbowKitAndWagmiProvider from "@/utils/RainbowKitAndWagmiProvider";
 import { Toaster } from 'sonner';
 import Layout from "@/components/shared/Layout";
 
