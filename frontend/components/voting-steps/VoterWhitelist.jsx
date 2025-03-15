@@ -66,7 +66,7 @@ const VoterWhitelist = ({ isOwner }) => {
       const voterRegisteredLogs = await publicClient.getLogs({
         address: VOTING_CONTRACT_ADDRESS,
         event: parseAbiItem('event VoterRegistered(address voterAddress)'),
-        fromBlock: 0n,
+        fromBlock: process.env.NEXT_PUBLIC_FROM_BLOCK ? BigInt(process.env.NEXT_PUBLIC_FROM_BLOCK) : 0n,
         toBlock: 'latest'
       });
       
