@@ -6,7 +6,7 @@ import { publicClient } from '@/utils/client'
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AlertMessage from '../shared/AlertMessage';
-import { getProposals } from '@/utils/votingUtils'
+import { getProposals } from '@/utils/votingUtils';
 
 const Votes = ({ isOwner }) => {
   const { address } = useAccount();
@@ -17,10 +17,10 @@ const Votes = ({ isOwner }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState(null);
 
-  // Ajouter les hooks pour la transaction
+  // hook pour les transactions d'écriture
   const { data: hash, error, isPending: isWritePending, writeContract } = useWriteContract();
   
-  // Attendre la confirmation de la transaction
+  // hook pour attendre la confirmation de la transaction
   const { isLoading: isConfirming, isSuccess, error: errorConfirmation } = useWaitForTransactionReceipt({
     hash
   });
@@ -113,6 +113,10 @@ const Votes = ({ isOwner }) => {
         type: 'error',
         message: errorConfirmation.message || "Erreur lors du vote"
       });
+    }
+
+    if (address) {
+      fetchProposals();
     }
   }, [isSuccess, errorConfirmation, address]);
 
@@ -216,8 +220,21 @@ const Votes = ({ isOwner }) => {
                 message="Vous pouvez voter pour une proposition ci-dessous."
               />
             </div>
-          )}
-          
+                )}
+                <div className="mb-6">
+                  {transactionStatus && (
+                    <div className="mb-4">
+                      <AlertMessage
+                        type={transactionStatus.type}
+                        title={
+                          transactionStatus.type === 'success' ? "Succès" :
+                            transactionStatus.type === 'error' ? "Erreur" :
+                              "Information"  // Cas par défaut pour 'info'
+                        }
+                        message={transactionStatus.message}
+                      />
+                    </div>)}
+                 </div>
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-4">Liste des propositions</h3>
             

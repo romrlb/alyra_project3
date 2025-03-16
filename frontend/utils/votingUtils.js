@@ -31,10 +31,11 @@ export const getProposals = async () => {
       })
 
       return {
-        proposalId: event.args.proposalId,
+        proposalId: Number(event.args.proposalId),
         description: proposal.description,
         blockTimestamp: Number(block.timestamp),
-        sender: transaction.from
+        sender: transaction.from,
+        voteCount: Number(proposal.voteCount)
       }
     })
   )
