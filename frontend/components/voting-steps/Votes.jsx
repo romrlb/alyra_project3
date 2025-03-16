@@ -84,16 +84,37 @@ const Votes = ({ isOwner }) => {
         type: 'success',
         message: "Vote enregistré avec succès!"
       });
-      // Rafraîchir les données
-      fetchProposals();
+      
+      // Relire les données du votant directement depuis le contrat
+      const updateVoterData = async () => {
+        try {
+          const updatedVoterData = await publicClient.readContract({
+            address: VOTING_CONTRACT_ADDRESS,
+            abi: VOTING_CONTRACT_ABI,
+            functionName: 'getVoter',
+            args: [address]
+          });
+          
+          setHasVoted(updatedVoterData.hasVoted);
+          setVotedProposalId(Number(updatedVoterData.votedProposalId));
+          
+          // Rafraîchir la liste des propositions
+          fetchProposals();
+        } catch (error) {
+          console.error("Erreur lors de la mise à jour des données après le vote:", error);
+        }
+      };
+      
+      updateVoterData();
     }
+    
     if (errorConfirmation) {
       setTransactionStatus({
         type: 'error',
         message: errorConfirmation.message || "Erreur lors du vote"
       });
     }
-  }, [isSuccess, errorConfirmation]);
+  }, [isSuccess, errorConfirmation, address]);
 
   // Modifier la fonction submitVote
   const submitVote = async (proposalId) => {
@@ -142,7 +163,16 @@ const Votes = ({ isOwner }) => {
     return Number(workflowStatus);
   };
 
+  // Obtenir la description de la proposition votée
+  const getVotedProposalDescription = () => {
+    if (!hasVoted || votedProposalId === null || proposals.length === 0) return "";
+    
+    const votedProposal = proposals.find(p => Number(p.proposalId) === votedProposalId);
+    return votedProposal ? votedProposal.description : "";
+  };
+
   const displayStatus = getDisplayStatus();
+  const votedProposalDescription = getVotedProposalDescription();
 
   return (
     <div>
@@ -175,7 +205,7 @@ const Votes = ({ isOwner }) => {
               <AlertMessage 
                 type="success"
                 title="Vote enregistré"
-                message={`Vous avez déjà voté pour la proposition #${votedProposalId}.`}
+                message={`Vous avez voté pour la proposition #${votedProposalId}${votedProposalDescription ? ` : "${votedProposalDescription}"` : ""}.`}
               />
             </div>
           ) : (
@@ -202,28 +232,33 @@ const Votes = ({ isOwner }) => {
                     key={proposal.proposalId.toString()} 
                     className="p-4 mb-3 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-gray-800"
                   >
-                    <div className="flex justify-between items-center mb-2">
-                      <Badge 
-                        variant="outline" 
-                        className="bg-purple-100 text-purple-700 border-purple-200"
-                      >
-                        Proposition #{proposal.proposalId.toString()}
-                      </Badge>
-                      <span className="text-lg font-semibold">{proposal.description}</span>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-4">
+                        <Badge 
+                          variant="outline" 
+                          className="bg-purple-100 text-purple-700 border-purple-200"
+                        >
+                          Proposition #{proposal.proposalId.toString()}
+                        </Badge>
+                        <span className="text-lg font-semibold">{proposal.description}</span>
+                      </div>
+                      
+                      <div>
+                        {displayStatus === 3 && isVoter && !hasVoted && (
+                          <Button 
+                            onClick={() => submitVote(proposal.proposalId)}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            Voter
+                          </Button>
+                        )}
+                        {hasVoted && votedProposalId === Number(proposal.proposalId) && (
+                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                            Votre vote
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {displayStatus === 3 && isVoter && !hasVoted && (
-                      <Button 
-                        onClick={() => submitVote(proposal.proposalId)}
-                        className="bg-blue-600 hover:bg-blue-700 items-center"
-                      >
-                        Voter
-                      </Button>
-                    )}
-                    {hasVoted && votedProposalId === proposal.id && (
-                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                        Votre vote
-                      </span>
-                    )}
                   </div>
                 ))}
               </div>
