@@ -135,11 +135,13 @@ const Proposals = ({ isOwner }) => {
         message: "Erreur lors de la soumission de la proposition"
       });
     }
-    else  if (isSuccess) {
+    else if (isSuccess) {
       setTransactionStatus({
         type: 'success',
         message: "Proposition ajoutée avec succès!"
       });
+      getProposals();
+      setProposalInput('');
     }
   }, [error, isSuccess]);
 
