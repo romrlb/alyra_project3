@@ -9,11 +9,6 @@ import { RocketIcon } from "@radix-ui/react-icons";
 import { parseAbiItem } from 'viem';
 import { publicClient } from '@/utils/client';
 import AlertMessage from '../shared/AlertMessage';
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
 
 const VoterWhitelist = ({ isOwner }) => {
   const { address } = useAccount();
