@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { publicClient } from '@/utils/client'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AlertMessage from '../shared/AlertMessage';
 import { getProposals } from '@/utils/votingUtils';
+import { toast } from 'sonner';
 
 const Votes = ({ isOwner }) => {
   const { address } = useAccount();
@@ -80,14 +81,15 @@ const Votes = ({ isOwner }) => {
   // Effet pour gérer le succès de la transaction
   useEffect(() => {
     if (isSuccess) {
-      setTransactionStatus({
-        type: 'success',
-        message: "Vote enregistré avec succès!"
-      });
+      // setTransactionStatus({
+      //   type: 'success',
+      //   message: "Vote enregistré avec succès!"
+      // });
       
       // Relire les données du votant directement depuis le contrat
       const updateVoterData = async () => {
         try {
+          // Utiliser publicClient.readContract au lieu de useReadContract
           const updatedVoterData = await publicClient.readContract({
             address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
             abi: VOTING_CONTRACT_ABI,
@@ -95,13 +97,17 @@ const Votes = ({ isOwner }) => {
             args: [address]
           });
           
-          setHasVoted(updatedVoterData.hasVoted);
-          setVotedProposalId(Number(updatedVoterData.votedProposalId));
-          
-          // Rafraîchir la liste des propositions
-          fetchProposals();
+          if (updatedVoterData) {
+            console.log("updatedVoterData", updatedVoterData)
+            setHasVoted(updatedVoterData.hasVoted);
+            setVotedProposalId(Number(updatedVoterData.votedProposalId));
+            
+            // Rafraîchir la liste des propositions
+            fetchProposals();
+          }
         } catch (error) {
           console.error("Erreur lors de la mise à jour des données après le vote:", error);
+          toast.error("Erreur lors de la mise à jour des données après le vote" + error.shortMessage || error.message);
         }
       };
       
@@ -109,10 +115,12 @@ const Votes = ({ isOwner }) => {
     }
     
     if (errorConfirmation) {
-      setTransactionStatus({
-        type: 'error',
-        message: errorConfirmation.message || "Erreur lors du vote"
-      });
+      console.log("Erreur lors du vote" + errorConfirmation.shortMessage || errorConfirmation.message);
+      toast.error("Erreur lors du vote" + errorConfirmation.shortMessage || errorConfirmation.message);
+      // setTransactionStatus({
+      //   type: 'error',
+      //   message: errorConfirmation.message || "Erreur lors du vote"
+      // });
     }
 
     if (address) {
@@ -123,10 +131,10 @@ const Votes = ({ isOwner }) => {
   // Modifier la fonction submitVote
   const submitVote = async (proposalId) => {
     try {
-      setTransactionStatus({
-        type: 'info',
-        message: "Transaction en cours de traitement..."
-      });
+      // setTransactionStatus({
+      //   type: 'info',
+      //   message: "Transaction en cours de traitement..."
+      // });
       
       await writeContract({
         address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
@@ -137,27 +145,31 @@ const Votes = ({ isOwner }) => {
 
     } catch(error) {
       console.error("Erreur lors du vote:", error);
-      setTransactionStatus({
-        type: 'error',
-        message: "Erreur lors de la soumission du vote"
-      });
+      toast.error("Erreur lors du vote" + error.shortMessage || error.message);
+      // setTransactionStatus({
+      //   type: 'error',
+      //   message: "Erreur lors de la soumission du vote"
+      // });
     }
   };
 
   // Ajouter un effet pour gérer le succès/échec de la transaction
   useEffect(() => {
     if (error) {
-      setTransactionStatus({
-        type: 'error',
-        message: "Erreur lors de la soumission du vote"
-      });
+      // setTransactionStatus({
+      //   type: 'error',
+      //   message: "Erreur lors de la soumission du vote"
+      // });
+      console.log("Erreur lors de la soumission du vote" + error.shortMessage || error.message);
+      toast.error("Erreur lors de la soumission du vote" + error.shortMessage || error.message);
     }
     if (isSuccess) {
       // La transaction est confirmée dans useWaitForTransactionReceipt
-      setTransactionStatus({
-        type: 'success',
-        message: "Vote enregistré avec succès!"
-      });
+      // setTransactionStatus({
+      //   type: 'success',
+      //   message: "Vote enregistré avec succès!"
+      // });
+      toast.success("Vote enregistré avec succès!");
     }
   }, [error, isSuccess]);
 
@@ -198,6 +210,56 @@ const Votes = ({ isOwner }) => {
         />
       ) : (
         <div>
+          {hash && (
+          <AlertMessage 
+            type="success"
+            title="Information"
+            message={`Transaction Hash: ${hash}`}
+            breakAll={true}
+            />
+          )}
+
+          {isWritePending && (
+            <AlertMessage 
+              type="info"
+              title="Information"
+              message="Transaction en cours de traitement..."
+            />
+          )}
+
+          {isConfirming && (
+            <AlertMessage 
+              type="warning"
+              title="Information"
+              message="En attente de confirmation..."
+            />
+          )}
+
+          {isSuccess && (
+            <AlertMessage 
+              type="success"
+              title="Information"
+              message="Proposition ajoutée avec succès !"
+            />
+          )}
+
+          {error && (
+            <AlertMessage 
+              type="error"
+              title="Erreur"
+              message={error.shortMessage || error.message}
+              breakAll={true}
+            />
+          )}
+
+          {errorConfirmation && (
+            <AlertMessage 
+              type="error"
+              title="Erreur"
+              message={errorConfirmation.shortMessage || errorConfirmation.message}
+              breakAll={true}
+            />
+          )}
           {!isVoter ? (
             <AlertMessage 
               type="warning"

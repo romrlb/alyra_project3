@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import AlertMessage from '../shared/AlertMessage';
 import { Badge } from '@/components/ui/badge';
 import { getProposals } from '@/utils/votingUtils';
+import { toast } from 'sonner';
 
 const Proposals = ({ isOwner }) => {
   const { address } = useAccount();
@@ -34,28 +35,28 @@ const Proposals = ({ isOwner }) => {
   });
 
   // eléments BC nécessaires à l'enregistement des propositions
-  const { data: hash, error, isSuccess, isPending, writeContract } = useWriteContract()
+  const { data: hash, error, isPending, writeContract } = useWriteContract()
 
   // Ajouter le hook pour attendre la transaction
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess, error: errorConfirmation  } = useWaitForTransactionReceipt({
     hash,
     onSuccess: async () => {
-      setTransactionStatus({
-        type: 'success',
-        message: "Proposition ajoutée avec succès!"
-      });
-      await fetchProposals();   // ce code n'est pas exécuté (?)
-      setProposalInput('');   // idem (?)
+      // setTransactionStatus({
+      //   type: 'success',
+      //   message: "Proposition ajoutée avec succès!"
+      // });
+      await fetchProposals();   
+      setProposalInput(''); 
     },
   });
 
   // Gérer la soumission de la proposition
   const handleProposal = async () => { 
     try {
-      setTransactionStatus({
-        type: 'info',
-        message: "Transaction en cours de traitement..."
-      });
+      // setTransactionStatus({
+      //   type: 'info',
+      //   message: "Transaction en cours de traitement..."
+      // });
       
       await writeContract({
         address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
@@ -66,10 +67,11 @@ const Proposals = ({ isOwner }) => {
 
     } catch(error) {
       console.error("Erreur lors de la soumission de la proposition:", error);
-      setTransactionStatus({
-        type: 'error',
-        message: "Erreur lors de la soumission de la proposition"
-      });
+      toast.error("Erreur lors de la soumission de la proposition" + error.shortMessage || error.message);
+      // setTransactionStatus({
+      //   type: 'error',
+      //   message: "Erreur lors de la soumission de la proposition" + error.shortMessage || error.message
+      // });
     }
   };
 
@@ -81,10 +83,11 @@ const Proposals = ({ isOwner }) => {
       setProposals(proposals);
     } catch (error) {
       console.error("Erreur lors de la récupération des propositions:", error);
-      setTransactionStatus({
-        type: 'error',
-        message: "Erreur lors de la récupération des propositions soumises"
-      });
+      toast.error("Erreur lors de la récupération des propositions soumises" + error.shortMessage || error.message);
+      // setTransactionStatus({
+      //   type: 'error',
+      //   message: "Erreur lors de la récupération des propositions soumises"
+      // });
     } finally {
       setIsLoading(false);
     }
@@ -107,16 +110,19 @@ const Proposals = ({ isOwner }) => {
   // Gestion des échecs ou succès lors de la soumission de la proposition 
   useEffect(() => {
     if (error) {
-      setTransactionStatus({
-        type: 'error',
-        message: "Erreur lors de la soumission de la proposition"
-      });
+      // setTransactionStatus({
+      //   type: 'error',
+      //   message: "Erreur lors de la soumission de la proposition"
+      // });
+      console.log("Erreur lors de la soumission de la proposition" + error.shortMessage || error.message);
+      toast.error("Erreur lors de la soumission de la proposition" + error.shortMessage || error.message);
     }
     if (isSuccess) {
-      setTransactionStatus({
-        type: 'success',
-        message: "Proposition ajoutée avec succès!"
-      });
+      // setTransactionStatus({
+      //   type: 'success',
+      //   message: "Proposition ajoutée avec succès!"
+      // });
+      toast.success("Proposition ajoutée avec succès!");
       fetchProposals();
       setProposalInput('');
     }
@@ -139,6 +145,57 @@ const Proposals = ({ isOwner }) => {
   return (
     <div>
       <h2 className="text-xl sm:text-2xl font-bold mb-4 mt-6">Propositions</h2>
+
+      {hash && (
+        <AlertMessage 
+          type="success"
+          title="Information"
+          message={`Transaction Hash: ${hash}`}
+          breakAll={true}
+        />
+      )}
+
+      {isPending && (
+        <AlertMessage 
+          type="info"
+          title="Information"
+          message="Transaction en cours de traitement..."
+        />
+      )}
+
+      {isConfirming && (
+        <AlertMessage 
+          type="warning"
+          title="Information"
+          message="En attente de confirmation..."
+        />
+      )}
+
+      {isSuccess && (
+        <AlertMessage 
+          type="success"
+          title="Information"
+          message="Proposition ajoutée avec succès !"
+        />
+      )}
+
+      {error && (
+        <AlertMessage 
+          type="error"
+          title="Erreur"
+          message={error.shortMessage || error.message}
+          breakAll={true}
+        />
+      )}
+
+      {errorConfirmation && (
+        <AlertMessage 
+          type="error"
+          title="Erreur"
+          message={errorConfirmation.shortMessage || errorConfirmation.message}
+          breakAll={true}
+        />
+      )}
       
       {displayStatus === -1 ? (
         <p className="text-gray-500">Chargement du statut...</p>

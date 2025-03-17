@@ -9,5 +9,5 @@ const RPC = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || ''
 
 export const publicClient = createPublicClient({
   chain: sepolia,
-  transport: http(RPC)
+  transport: http(RPC),
 })
