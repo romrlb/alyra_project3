@@ -10,6 +10,7 @@ const Voting = () => {
   const { address } = useAccount();
   const [isOwner, setIsOwner] = useState(false);
   const [activeTab, setActiveTab] = useState("workflow");
+  const [refreshKey, setRefreshKey] = useState(0); // État pour gérer le rafraîchissement
 
   // Lire l'adresse du propriétaire du contrat
   const { data: ownerAddress, isLoading: isLoadingOwner } = useReadContract({
@@ -34,7 +35,11 @@ const Voting = () => {
     }
   }, [ownerAddress, address]);
 
-   
+  // Fonction pour rafraîchir les onglets
+  const refreshTabs = () => {
+    setRefreshKey(prevKey => prevKey + 1);
+  };
+
   return (
     <div className="flex flex-col">
       <h2 className="text-2xl font-bold mb-6">Plateforme de Vote</h2>
@@ -107,8 +112,8 @@ const Voting = () => {
           <Proposals isOwner={isOwner}/>
         </TabsContent>
         
-        <TabsContent value="votes" className="p-4 mt-4 border rounded-lg shadow-sm">
-          <Votes isOwner={isOwner} />
+        <TabsContent key={`votes-${refreshKey}`} value="votes" className="p-4 mt-4 border rounded-lg shadow-sm">
+          <Votes isOwner={isOwner} onRefresh={refreshTabs} />
         </TabsContent>
         
         <TabsContent value="result" className="p-4 mt-4 border rounded-lg shadow-sm">

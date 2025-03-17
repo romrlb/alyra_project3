@@ -2,25 +2,25 @@
 import { useState, useEffect } from 'react';
 import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { publicClient } from '@/utils/client'
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AlertMessage from '../shared/AlertMessage';
-import { getProposals } from '@/utils/votingUtils'
+import { getProposals } from '@/utils/votingUtils';
+import { toast } from 'sonner';
 
-const Votes = ({ isOwner }) => {
+const Votes = ({ isOwner, onRefresh }) => {
   const { address } = useAccount();
-  const [isVoter, setIsVoter] = useState(false);
+  const [isVoter, setIsVoter] = useState(true);
   const [proposals, setProposals] = useState([]);
   const [hasVoted, setHasVoted] = useState(false);
   const [votedProposalId, setVotedProposalId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [transactionStatus, setTransactionStatus] = useState(null);
 
-  // Ajouter les hooks pour la transaction
+  // hook pour les transactions d'écriture
   const { data: hash, error, isPending: isWritePending, writeContract } = useWriteContract();
   
-  // Attendre la confirmation de la transaction
+  // hook pour attendre la confirmation de la transaction
   const { isLoading: isConfirming, isSuccess, error: errorConfirmation } = useWaitForTransactionReceipt({
     hash
   });
@@ -51,13 +51,13 @@ const Votes = ({ isOwner }) => {
         setVotedProposalId(Number(voterData.votedProposalId));
       }
     }
-  }, [voterData]);
+  }, [voterData, address]);
 
 // Récupérer les propositions
   const fetchProposals = async() => {
     try {
       setIsLoading(true)
-      const proposals = await getProposals()
+      const proposals = await getProposals(address)
       setProposals(proposals)
     } catch (error) {
       console.error("Erreur lors de la récupération des propositions:", error)
@@ -72,59 +72,30 @@ const Votes = ({ isOwner }) => {
 
   // Effet pour récupérer les propositions
   useEffect(() => {
-    if (address) {
+    if (address && isVoter) {
       fetchProposals()
     }
-  }, [address])
+  }, [address, voterData])
 
   // Effet pour gérer le succès de la transaction
   useEffect(() => {
     if (isSuccess) {
-      setTransactionStatus({
-        type: 'success',
-        message: "Vote enregistré avec succès!"
-      });
-      
-      // Relire les données du votant directement depuis le contrat
-      const updateVoterData = async () => {
-        try {
-          const updatedVoterData = await publicClient.readContract({
-            address: VOTING_CONTRACT_ADDRESS,
-            abi: VOTING_CONTRACT_ABI,
-            functionName: 'getVoter',
-            args: [address]
-          });
-          
-          setHasVoted(updatedVoterData.hasVoted);
-          setVotedProposalId(Number(updatedVoterData.votedProposalId));
-          
-          // Rafraîchir la liste des propositions
-          fetchProposals();
-        } catch (error) {
-          console.error("Erreur lors de la mise à jour des données après le vote:", error);
-        }
-      };
-      
-      updateVoterData();
+
+      // Rafraîchir l'onglet après le vote
+      onRefresh();
     }
     
     if (errorConfirmation) {
-      setTransactionStatus({
-        type: 'error',
-        message: errorConfirmation.message || "Erreur lors du vote"
-      });
+      console.log("Erreur lors du vote" + errorConfirmation.shortMessage || errorConfirmation.message);
+      toast.error("Erreur lors du vote" + errorConfirmation.shortMessage || errorConfirmation.message);
     }
+
   }, [isSuccess, errorConfirmation, address]);
 
   // Modifier la fonction submitVote
   const submitVote = async (proposalId) => {
     try {
-      setTransactionStatus({
-        type: 'info',
-        message: "Transaction en cours de traitement..."
-      });
-      
-      await writeContract({
+      writeContract({
         address: VOTING_CONTRACT_ADDRESS,
         abi: VOTING_CONTRACT_ABI,
         functionName: 'setVote',
@@ -133,29 +104,9 @@ const Votes = ({ isOwner }) => {
 
     } catch(error) {
       console.error("Erreur lors du vote:", error);
-      setTransactionStatus({
-        type: 'error',
-        message: "Erreur lors de la soumission du vote"
-      });
+      toast.error("Erreur lors du vote" + error.shortMessage || error.message);
     }
   };
-
-  // Ajouter un effet pour gérer le succès/échec de la transaction
-  useEffect(() => {
-    if (error) {
-      setTransactionStatus({
-        type: 'error',
-        message: "Erreur lors de la soumission du vote"
-      });
-    }
-    if (isSuccess) {
-      // La transaction est confirmée dans useWaitForTransactionReceipt
-      setTransactionStatus({
-        type: 'success',
-        message: "Vote enregistré avec succès!"
-      });
-    }
-  }, [error, isSuccess]);
 
   // Déterminer le statut d'affichage en fonction du workflow
   const getDisplayStatus = () => {
@@ -194,6 +145,56 @@ const Votes = ({ isOwner }) => {
         />
       ) : (
         <div>
+          {hash && (
+          <AlertMessage 
+            type="success"
+            title="Information"
+            message={`Transaction Hash: ${hash}`}
+            breakAll={true}
+            />
+          )}
+
+          {isWritePending && (
+            <AlertMessage 
+              type="info"
+              title="Information"
+              message="Transaction en cours de traitement..."
+            />
+          )}
+
+          {isConfirming && (
+            <AlertMessage 
+              type="warning"
+              title="Information"
+              message="En attente de confirmation..."
+            />
+          )}
+
+          {isSuccess && (
+            <AlertMessage 
+              type="success"
+              title="Information"
+              message="Proposition ajoutée avec succès !"
+            />
+          )}
+
+          {error && (
+            <AlertMessage 
+              type="error"
+              title="Erreur"
+              message={error.shortMessage || error.message}
+              breakAll={true}
+            />
+          )}
+
+          {errorConfirmation && (
+            <AlertMessage 
+              type="error"
+              title="Erreur"
+              message={errorConfirmation.shortMessage || errorConfirmation.message}
+              breakAll={true}
+            />
+          )}
           {!isVoter ? (
             <AlertMessage 
               type="warning"
@@ -216,8 +217,21 @@ const Votes = ({ isOwner }) => {
                 message="Vous pouvez voter pour une proposition ci-dessous."
               />
             </div>
-          )}
-          
+                )}
+                <div className="mb-6">
+                  {transactionStatus && (
+                    <div className="mb-4">
+                      <AlertMessage
+                        type={transactionStatus.type}
+                        title={
+                          transactionStatus.type === 'success' ? "Succès" :
+                            transactionStatus.type === 'error' ? "Erreur" :
+                              "Information"  // Cas par défaut pour 'info'
+                        }
+                        message={transactionStatus.message}
+                      />
+                    </div>)}
+                 </div>
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-4">Liste des propositions</h3>
             

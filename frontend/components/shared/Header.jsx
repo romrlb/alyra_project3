@@ -12,9 +12,9 @@ const Header = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
           <div className="flex items-center gap-2 sm:gap-3">
             <img 
-              src="/images/logo.png" 
+              src="/images/logo.jpeg" 
               alt="Voting App Logo" 
-              className="h-6 sm:h-8 w-auto"
+              className="h-12 sm:h-16 w-auto"
             />
             <h1 className="text-xl sm:text-2xl font-bold">Voting DApp</h1>
           </div>

@@ -3,7 +3,7 @@ import { parseAbiItem } from 'viem'
 import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants'
 
 // Fonction pour récupérer toutes les propositions
-export const getProposals = async () => {
+export const getProposals = async address => {
   const proposalEvents = await publicClient.getLogs({
     address: VOTING_CONTRACT_ADDRESS,
     event: parseAbiItem('event ProposalRegistered(uint proposalId)'),
@@ -27,14 +27,16 @@ export const getProposals = async () => {
         address: VOTING_CONTRACT_ADDRESS,
         abi: VOTING_CONTRACT_ABI,
         functionName: 'getOneProposal',
-        args: [event.args.proposalId]
+        args: [event.args.proposalId],
+        account: address
       })
 
       return {
-        proposalId: event.args.proposalId,
+        proposalId: Number(event.args.proposalId),
         description: proposal.description,
         blockTimestamp: Number(block.timestamp),
-        sender: transaction.from
+        sender: transaction.from,
+        voteCount: Number(proposal.voteCount)
       }
     })
   )
