@@ -40,7 +40,7 @@ const Results = ({ isOwner }) => {
     const init = async () => {
       try {
         setIsLoading(true);
-        const props = await getProposals();
+        const props = await getProposals(address);
         setProposals(props);
       } catch (error) {
         console.error("Erreur lors de la récupération des propositions:", error);

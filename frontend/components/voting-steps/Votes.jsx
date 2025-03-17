@@ -57,7 +57,7 @@ const Votes = ({ isOwner }) => {
   const fetchProposals = async() => {
     try {
       setIsLoading(true)
-      const proposals = await getProposals()
+      const proposals = await getProposals(address)
       setProposals(proposals)
     } catch (error) {
       console.error("Erreur lors de la récupération des propositions:", error)
