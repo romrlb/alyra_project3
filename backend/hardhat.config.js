@@ -16,11 +16,11 @@ module.exports = {
   },
   defaultNetwork: 'hardhat',
   networks: {
-    sepolia: {
+    /*sepolia: {
       url: SEPOLIA_RPC_URL,
       accounts: [`0x${PRIVATE_KEY}`],
       chainId: 11155111
-    },
+    },*/
     localhost: {
       url: 'http://127.0.0.1:8545',
       chainId: 31337,
