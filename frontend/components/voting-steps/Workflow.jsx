@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
+import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { toast } from 'sonner';
 import AlertMessage from '../shared/AlertMessage';
@@ -20,7 +20,7 @@ const Workflow = ({ isOwner }) => {
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus, isLoading: isLoadingStatus, refetch: refetchWorkflowStatus } = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
     account: address
@@ -61,7 +61,7 @@ const Workflow = ({ isOwner }) => {
     ];
     
     writeContract({
-      address: VOTING_CONTRACT_ADDRESS,
+      address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
       abi: VOTING_CONTRACT_ABI,
       functionName: functionNames[currentStep]
     });

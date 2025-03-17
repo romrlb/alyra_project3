@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
+import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount } from 'wagmi';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VoterWhitelist, Proposals, Votes, Results } from './voting-steps';
@@ -13,14 +13,14 @@ const Voting = () => {
 
   // Lire l'adresse du propriétaire du contrat
   const { data: ownerAddress, isLoading: isLoadingOwner } = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'owner',
   });
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus, isLoading: isLoadingStatus , refetch} = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
     account: address,

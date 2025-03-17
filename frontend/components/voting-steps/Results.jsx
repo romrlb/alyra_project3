@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
+import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount } from 'wagmi';
 import AlertMessage from '../shared/AlertMessage';
 import { getProposals } from '@/utils/votingUtils';
@@ -14,7 +14,7 @@ const Results = ({ isOwner }) => {
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus } = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
     account: address
@@ -22,7 +22,7 @@ const Results = ({ isOwner }) => {
 
   // Lire l'ID de la proposition gagnante
   const { data: winningProposalID } = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'winningProposalID',
     account: address  

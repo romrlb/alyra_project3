@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
+import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { publicClient } from '@/utils/client'
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ const Votes = ({ isOwner }) => {
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus } = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
     account: address
@@ -35,7 +35,7 @@ const Votes = ({ isOwner }) => {
 
   // Vérifier si l'utilisateur est un votant
   const { data: voterData } = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'getVoter',
     args: [address],
@@ -89,7 +89,7 @@ const Votes = ({ isOwner }) => {
       const updateVoterData = async () => {
         try {
           const updatedVoterData = await publicClient.readContract({
-            address: VOTING_CONTRACT_ADDRESS,
+            address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
             abi: VOTING_CONTRACT_ABI,
             functionName: 'getVoter',
             args: [address]
@@ -129,7 +129,7 @@ const Votes = ({ isOwner }) => {
       });
       
       await writeContract({
-        address: VOTING_CONTRACT_ADDRESS,
+        address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
         abi: VOTING_CONTRACT_ABI,
         functionName: 'setVote',
         args: [Number(proposalId)]

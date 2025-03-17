@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
+import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { toast } from 'sonner';
 import { RocketIcon } from "@radix-ui/react-icons";
@@ -19,7 +19,7 @@ const VoterWhitelist = ({ isOwner }) => {
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus, isLoading: isLoadingStatus } = useReadContract({
-    address: VOTING_CONTRACT_ADDRESS,
+    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
     account: address
@@ -59,7 +59,7 @@ const VoterWhitelist = ({ isOwner }) => {
       
       // Récupérer tous les événements VoterRegistered
       const voterRegisteredLogs = await publicClient.getLogs({
-        address: VOTING_CONTRACT_ADDRESS,
+        address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
         event: parseAbiItem('event VoterRegistered(address voterAddress)'),
         fromBlock: process.env.NEXT_PUBLIC_FROM_BLOCK ? BigInt(process.env.NEXT_PUBLIC_FROM_BLOCK) : 0n,
         toBlock: 'latest'
@@ -89,7 +89,7 @@ const VoterWhitelist = ({ isOwner }) => {
     if (!isAddressValid) return;
     
     writeContract({
-      address: VOTING_CONTRACT_ADDRESS,
+      address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
       abi: VOTING_CONTRACT_ABI,
       functionName: 'addVoter',
       args: [voterAddress]
