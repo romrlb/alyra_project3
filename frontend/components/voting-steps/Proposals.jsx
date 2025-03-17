@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
+import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useWriteContract, useAccount, useWaitForTransactionReceipt } from 'wagmi';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ const Proposals = ({ isOwner }) => {
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus } = useReadContract({
-    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+    address: VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
     account: address
@@ -27,7 +27,7 @@ const Proposals = ({ isOwner }) => {
 
   // Vérifier si l'utilisateur est un votant
   const { data: voterData } = useReadContract({
-    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+    address: VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'getVoter',
     args: [address],
@@ -59,7 +59,7 @@ const Proposals = ({ isOwner }) => {
       // });
       
       await writeContract({
-        address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+        address: VOTING_CONTRACT_ADDRESS,
         abi: VOTING_CONTRACT_ABI,
         functionName: 'addProposal',
         args: [proposalInput]
@@ -110,18 +110,10 @@ const Proposals = ({ isOwner }) => {
   // Gestion des échecs ou succès lors de la soumission de la proposition 
   useEffect(() => {
     if (error) {
-      // setTransactionStatus({
-      //   type: 'error',
-      //   message: "Erreur lors de la soumission de la proposition"
-      // });
       console.log("Erreur lors de la soumission de la proposition" + error.shortMessage || error.message);
       toast.error("Erreur lors de la soumission de la proposition" + error.shortMessage || error.message);
     }
     if (isSuccess) {
-      // setTransactionStatus({
-      //   type: 'success',
-      //   message: "Proposition ajoutée avec succès!"
-      // });
       toast.success("Proposition ajoutée avec succès!");
       fetchProposals();
       setProposalInput('');

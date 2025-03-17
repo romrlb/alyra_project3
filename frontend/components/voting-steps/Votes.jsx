@@ -1,17 +1,16 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
+import { useState, useEffect } from 'react';
+import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants';
 import { useReadContract, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { publicClient } from '@/utils/client'
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import AlertMessage from '../shared/AlertMessage';
 import { getProposals } from '@/utils/votingUtils';
 import { toast } from 'sonner';
 
-const Votes = ({ isOwner }) => {
+const Votes = ({ isOwner, onRefresh }) => {
   const { address } = useAccount();
-  const [isVoter, setIsVoter] = useState(false);
+  const [isVoter, setIsVoter] = useState(true);
   const [proposals, setProposals] = useState([]);
   const [hasVoted, setHasVoted] = useState(false);
   const [votedProposalId, setVotedProposalId] = useState(null);
@@ -28,7 +27,7 @@ const Votes = ({ isOwner }) => {
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus } = useReadContract({
-    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+    address: VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'workflowStatus',
     account: address
@@ -36,7 +35,7 @@ const Votes = ({ isOwner }) => {
 
   // Vérifier si l'utilisateur est un votant
   const { data: voterData } = useReadContract({
-    address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+    address: VOTING_CONTRACT_ADDRESS,
     abi: VOTING_CONTRACT_ABI,
     functionName: 'getVoter',
     args: [address],
@@ -52,7 +51,7 @@ const Votes = ({ isOwner }) => {
         setVotedProposalId(Number(voterData.votedProposalId));
       }
     }
-  }, [voterData]);
+  }, [voterData, address]);
 
 // Récupérer les propositions
   const fetchProposals = async() => {
@@ -73,71 +72,31 @@ const Votes = ({ isOwner }) => {
 
   // Effet pour récupérer les propositions
   useEffect(() => {
-    if (address) {
+    if (address && isVoter) {
       fetchProposals()
     }
-  }, [address])
+  }, [address, voterData])
 
   // Effet pour gérer le succès de la transaction
   useEffect(() => {
     if (isSuccess) {
-      // setTransactionStatus({
-      //   type: 'success',
-      //   message: "Vote enregistré avec succès!"
-      // });
-      
-      // Relire les données du votant directement depuis le contrat
-      const updateVoterData = async () => {
-        try {
-          // Utiliser publicClient.readContract au lieu de useReadContract
-          const updatedVoterData = await publicClient.readContract({
-            address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
-            abi: VOTING_CONTRACT_ABI,
-            functionName: 'getVoter',
-            args: [address]
-          });
-          
-          if (updatedVoterData) {
-            console.log("updatedVoterData", updatedVoterData)
-            setHasVoted(updatedVoterData.hasVoted);
-            setVotedProposalId(Number(updatedVoterData.votedProposalId));
-            
-            // Rafraîchir la liste des propositions
-            fetchProposals();
-          }
-        } catch (error) {
-          console.error("Erreur lors de la mise à jour des données après le vote:", error);
-          toast.error("Erreur lors de la mise à jour des données après le vote" + error.shortMessage || error.message);
-        }
-      };
-      
-      updateVoterData();
+
+      // Rafraîchir l'onglet après le vote
+      onRefresh();
     }
     
     if (errorConfirmation) {
       console.log("Erreur lors du vote" + errorConfirmation.shortMessage || errorConfirmation.message);
       toast.error("Erreur lors du vote" + errorConfirmation.shortMessage || errorConfirmation.message);
-      // setTransactionStatus({
-      //   type: 'error',
-      //   message: errorConfirmation.message || "Erreur lors du vote"
-      // });
     }
 
-    if (address) {
-      fetchProposals();
-    }
   }, [isSuccess, errorConfirmation, address]);
 
   // Modifier la fonction submitVote
   const submitVote = async (proposalId) => {
     try {
-      // setTransactionStatus({
-      //   type: 'info',
-      //   message: "Transaction en cours de traitement..."
-      // });
-      
-      await writeContract({
-        address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+      writeContract({
+        address: VOTING_CONTRACT_ADDRESS,
         abi: VOTING_CONTRACT_ABI,
         functionName: 'setVote',
         args: [Number(proposalId)]
@@ -146,32 +105,8 @@ const Votes = ({ isOwner }) => {
     } catch(error) {
       console.error("Erreur lors du vote:", error);
       toast.error("Erreur lors du vote" + error.shortMessage || error.message);
-      // setTransactionStatus({
-      //   type: 'error',
-      //   message: "Erreur lors de la soumission du vote"
-      // });
     }
   };
-
-  // Ajouter un effet pour gérer le succès/échec de la transaction
-  useEffect(() => {
-    if (error) {
-      // setTransactionStatus({
-      //   type: 'error',
-      //   message: "Erreur lors de la soumission du vote"
-      // });
-      console.log("Erreur lors de la soumission du vote" + error.shortMessage || error.message);
-      toast.error("Erreur lors de la soumission du vote" + error.shortMessage || error.message);
-    }
-    if (isSuccess) {
-      // La transaction est confirmée dans useWaitForTransactionReceipt
-      // setTransactionStatus({
-      //   type: 'success',
-      //   message: "Vote enregistré avec succès!"
-      // });
-      toast.success("Vote enregistré avec succès!");
-    }
-  }, [error, isSuccess]);
 
   // Déterminer le statut d'affichage en fonction du workflow
   const getDisplayStatus = () => {

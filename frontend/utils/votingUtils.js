@@ -1,14 +1,11 @@
 import { publicClient } from '@/utils/client'
 import { parseAbiItem } from 'viem'
-import {
-  NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
-  VOTING_CONTRACT_ABI
-} from '@/constants'
+import { VOTING_CONTRACT_ADDRESS, VOTING_CONTRACT_ABI } from '@/constants'
 
 // Fonction pour récupérer toutes les propositions
 export const getProposals = async address => {
   const proposalEvents = await publicClient.getLogs({
-    address: process.env.NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+    address: VOTING_CONTRACT_ADDRESS,
     event: parseAbiItem('event ProposalRegistered(uint proposalId)'),
     fromBlock: process.env.NEXT_PUBLIC_FROM_BLOCK
       ? BigInt(process.env.NEXT_PUBLIC_FROM_BLOCK)
@@ -27,7 +24,7 @@ export const getProposals = async address => {
       })
 
       const proposal = await publicClient.readContract({
-        address: NEXT_PUBLIC_VOTING_CONTRACT_ADDRESS,
+        address: VOTING_CONTRACT_ADDRESS,
         abi: VOTING_CONTRACT_ABI,
         functionName: 'getOneProposal',
         args: [event.args.proposalId],
