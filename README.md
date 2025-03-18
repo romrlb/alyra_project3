@@ -3,8 +3,8 @@
 Application de vote décentralisée permettant de gérer un processus de vote transparent et sécurisé.
 
 ### Application déployée
-[Voir l'application sur Vercel](https://dappvoting-67hxa9npl-girtons-projects.vercel.app/)
-[Contrat déployé sur sepolia](https://sepolia.etherscan.io/address/0x263915792e5B7C61a8969a864224634ad105a167)
+[Voir l'application sur Vercel](https://alyra-project3-lime.vercel.app/)
+[Contrat déployé sur sepolia](https://sepolia.etherscan.io/address/0x4F9e4B668a437d960964a5273Bdd67741fc77d34)
 
 ### Démonstration vidéo
 [Voir la démonstration vidéo](https://www.loom.com/share/c8d394763e204db3a9394ec8c0014e73?sid=5554e973-6a59-4b56-b79d-6385dea92e3e)
