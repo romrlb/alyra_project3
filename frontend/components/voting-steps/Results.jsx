@@ -11,6 +11,7 @@ const Results = ({ isOwner }) => {
   const [proposals, setProposals] = useState([]);
   const [winningProposalId, setWinningProposalId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVoter, setIsVoter] = useState(false);
 
   // Lire le statut actuel du workflow
   const { data: workflowStatus } = useReadContract({
@@ -27,6 +28,23 @@ const Results = ({ isOwner }) => {
     functionName: 'winningProposalID',
     account: address  
   });
+
+  // Vérifier si l'utilisateur est un votant
+  const { data: voterData } = useReadContract({
+    address: VOTING_CONTRACT_ADDRESS,
+    abi: VOTING_CONTRACT_ABI,
+    functionName: 'getVoter',
+    args: [address],
+    account: address
+  });
+
+  useEffect(() => {
+    if (voterData) {
+      setIsVoter(voterData.isRegistered);
+    } else {
+      setIsVoter(false);
+    }
+  }, [voterData, address]);
 
   // Effet pour mettre à jour winningProposalId quand winningProposalID change
   useEffect(() => {
@@ -50,7 +68,7 @@ const Results = ({ isOwner }) => {
     };
 
     init();
-  }, []);
+  }, [address]);
 
   // Obtenir la description de la proposition votée
   const getProposal = (propID) => {
@@ -69,7 +87,7 @@ const Results = ({ isOwner }) => {
   return (
     <div>
       <h2 className="text-xl sm:text-2xl font-bold mb-4 mt-6">Résultats</h2>
-      
+
       {displayStatus === -1 ? (
         <p className="text-gray-500">Chargement du statut...</p>
       ) : displayStatus < 5 ? (
@@ -84,51 +102,64 @@ const Results = ({ isOwner }) => {
             <p className="text-gray-500">Chargement des résultats...</p>
           ) : (
             <>
-              <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="text-lg font-semibold mb-2 text-blue-800">Proposition gagnante</h3>
-                <div className="p-4 bg-white border border-blue-300 rounded-lg shadow-sm">
-                  {winningProposalId !== null && (
-                    <>
-                      <p className="font-medium text-lg">
-                        {getProposal(winningProposalId)?.description || "Aucune proposition"}
-                      </p>
-                      <p className="mt-2 text-blue-600">
-                        Votes reçus: <span className="font-bold">
-                          {getProposal(winningProposalId)?.voteCount || 0}
-                        </span>
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <h3 className="text-lg font-semibold mb-4">Toutes les propositions</h3>
-              <div className="space-y-4">
-                {proposals.map((proposal) => (
-                  <div 
-                    key={proposal.proposalId} 
-                    className={`p-4 border rounded-lg shadow-sm ${proposal.proposalId === winningProposalId ? 'bg-blue-50 border-blue-300' : 'bg-white'}`}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <Badge 
-                        variant="outline" 
-                        className="bg-purple-100 text-purple-700 border-purple-200"
-                      >
-                        Proposition #{proposal.proposalId.toString()}
-                      </Badge>
-                      {proposal.proposalId === winningProposalId && (
-                        <span className="mx-auto px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                          Gagnant
-                        </span>
-                      )}
-                      <span className="text-lg font-semibold ml-auto">{proposal.description}</span>
-                    </div>
-                    <p className="mt-2 text-gray-600">
-                      Votes reçus: <span className="font-semibold">{proposal.voteCount}</span>
-                    </p>
+              {!isVoter && (
+                <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-2 text-blue-800">Proposition gagnante</h3>
+                  <div className="p-4 bg-white border border-blue-300 rounded-lg shadow-sm">
+                    <p className="font-medium text-lg">ID de la proposition gagnante: <span className="font-bold">{winningProposalId}</span></p>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+              
+              {isVoter && (
+                <>
+                  <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="text-lg font-semibold mb-2 text-blue-800">Proposition gagnante</h3>
+                    <div className="p-4 bg-white border border-blue-300 rounded-lg shadow-sm">
+                      {winningProposalId !== null && (
+                        <>
+                          <p className="font-medium text-lg">
+                            {getProposal(winningProposalId)?.description || "Aucune proposition"}
+                          </p>
+                          <p className="mt-2 text-blue-600">
+                            Votes reçus: <span className="font-bold">
+                              {getProposal(winningProposalId)?.voteCount || 0}
+                            </span>
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                
+                  <h3 className="text-lg font-semibold mb-4">Toutes les propositions</h3>
+                  <div className="space-y-4">
+                    {proposals.map((proposal) => (
+                      <div 
+                        key={proposal.proposalId} 
+                        className={`p-4 border rounded-lg shadow-sm ${Number(proposal.proposalId) === winningProposalId ? 'bg-blue-50 border-blue-300' : 'bg-white'}`}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <Badge 
+                            variant="outline" 
+                            className="bg-purple-100 text-purple-700 border-purple-200"
+                          >
+                            Proposition #{proposal.proposalId.toString()}
+                          </Badge>
+                          {Number(proposal.proposalId) === winningProposalId && (
+                            <span className="mx-auto px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                              Gagnant
+                            </span>
+                          )}
+                          <span className="text-lg font-semibold ml-auto">{proposal.description}</span>
+                        </div>
+                        <p className="mt-2 text-gray-600">
+                          Votes reçus: <span className="font-semibold">{proposal.voteCount}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
