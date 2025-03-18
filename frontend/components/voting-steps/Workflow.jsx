@@ -69,89 +69,112 @@ const Workflow = ({ isOwner }) => {
 
   return (
     <div>
-      {isLoadingStatus ? (
-        <p className="text-gray-500">Chargement du statut...</p>
-      ) : (
-        <div>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold mb-4 mt-6">Etape actuelle</h2>
-              <p className="text-gray-600">{workflowSteps[Number(workflowStatus)].name}</p>
-              <p className="text-sm text-gray-500">{workflowSteps[Number(workflowStatus)].description}</p>
-            </div>
-            
-            {isOwner && Number(workflowStatus) < 5 && (
-              <div className="mt-4 sm:mt-0">
-                <Button 
-                  onClick={nextWorkflowStep}
-                  disabled={isWritePending || isConfirming}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  {isWritePending || isConfirming ? "En cours..." : `Passer à l'étape suivante`}
-                </Button>
-              </div>
-            )}
+      <h2 className="text-xl sm:text-2xl font-bold mb-4 mt-6">Étapes du processus de vote</h2>
+      
+      {/* Afficher l'étape actuelle du workflow */}
+      {workflowStatus !== undefined ? (
+        <div className="mb-6">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+            <p className="font-medium text-blue-800">
+              Étape actuelle : <span className="font-bold">{workflowSteps[Number(workflowStatus)].name}</span>
+            </p>
+            <p className="text-blue-600 mt-1">
+              {workflowSteps[Number(workflowStatus)].description}
+            </p>
           </div>
           
-          <div className="flex flex-col w-full mt-6">
-            {hash && (
-              <AlertMessage 
-                type="success"
-                title="Information"
-                message={`Transaction Hash: ${hash}`}
-                breakAll={true}
-              />
-            )}
-            
-            {isConfirming && (
-              <AlertMessage 
-                type="warning"
-                title="Information"
-                message="En attente de confirmation..."
-              />
-            )}
-            
-            {isSuccess && (
-              <AlertMessage 
-                type="success"
-                title="Information"
-                message="Étape du workflow mise à jour avec succès !"
-              />
-            )}
-            
-            {error && (
-              <AlertMessage 
-                type="error"
-                title="Erreur"
-                message={error.shortMessage || error.message}
-                breakAll={true}
-              />
-            )}
-          </div>
-          
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-4">Toutes les étapes</h3>
-            <div className="space-y-3">
-              {workflowSteps.map((step) => (
-                <div 
-                  key={step.id} 
-                  className={`p-3 border rounded-lg ${Number(workflowStatus) === step.id ? 'bg-blue-50 border-blue-300' : 'bg-white'}`}
-                >
-                  <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${Number(workflowStatus) === step.id ? 'bg-blue-500 text-white' : Number(workflowStatus) > step.id ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
-                      {Number(workflowStatus) > step.id ? '✓' : step.id + 1}
-                    </div>
-                    <div>
-                      <p className="font-medium">{step.name}</p>
-                      <p className="text-sm text-gray-500">{step.description}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+          {/* Afficher le bouton "Étape suivante" uniquement pour le propriétaire */}
+          {isOwner && (
+            <div className="mt-4">
+              <Button 
+                onClick={nextWorkflowStep}
+                disabled={
+                  Number(workflowStatus) >= workflowSteps.length - 1 || 
+                  isWritePending || 
+                  isConfirming
+                }
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isWritePending || isConfirming ? "Traitement en cours..." : "Passer à l'étape suivante"}
+              </Button>
             </div>
-          </div>
+          )}
         </div>
+      ) : (
+        <p className="text-gray-500">Chargement du statut du workflow...</p>
       )}
+
+      {/* Alertes pour les transactions */}
+      {hash && (
+        <AlertMessage 
+          type="success"
+          title="Transaction envoyée"
+          message={`Hash de transaction: ${hash}`}
+          breakAll={true}
+        />
+      )}
+
+      {error && (
+        <AlertMessage 
+          type="error"
+          title="Erreur"
+          message={error.message}
+          breakAll={true}
+        />
+      )}
+
+      {isConfirming && (
+        <AlertMessage 
+          type="info"
+          title="En attente de confirmation"
+          message="La transaction est en cours de confirmation sur la blockchain..."
+        />
+      )}
+
+      {isSuccess && (
+        <AlertMessage 
+          type="success"
+          title="Transaction confirmée"
+          message="L'étape du workflow a été mise à jour avec succès !"
+        />
+      )}
+
+      {/* Afficher toutes les étapes du workflow sous forme de timeline */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Progression du vote</h3>
+        <div className="relative">
+          <div className="absolute left-4 top-0 h-full w-0.5 bg-gray-200"></div>
+          {workflowSteps.map((step, index) => (
+            <div key={step.id} className="relative pl-10 pb-8">
+              <div className={`absolute left-0 top-1 w-8 h-8 flex items-center justify-center rounded-full border-2 ${
+                Number(workflowStatus) === index 
+                  ? 'bg-blue-500 border-blue-500 text-white' 
+                  : Number(workflowStatus) > index 
+                    ? 'bg-green-500 border-green-500 text-white' 
+                    : 'bg-white border-gray-300 text-gray-500'
+              }`}>
+                {Number(workflowStatus) > index ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span>{index + 1}</span>
+                )}
+              </div>
+              <div className={`font-medium ${
+                Number(workflowStatus) === index 
+                  ? 'text-blue-500' 
+                  : Number(workflowStatus) > index 
+                    ? 'text-green-600' 
+                    : 'text-gray-500'
+              }`}>
+                {step.name}
+              </div>
+              <div className="text-sm text-gray-500 mt-1">{step.description}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
